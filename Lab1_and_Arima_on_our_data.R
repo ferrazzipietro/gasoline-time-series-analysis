@@ -8,7 +8,7 @@ library(astsa)
 library(knitr)
 
 
-gasoline_month <- read.csv("/Users/pietro/Desktop/uni/times_series/progetto/data/prezzi_mensili_benzina_dal_1996_a_20221028.csv")
+gasoline_month <- read.csv("data/prezzi_mensili_benzina_dal_1996_a_20221028.csv")
 gasoline_month <- gasoline_month %>% mutate(date = as.Date(paste(ANNO, CODICE_MESE, "01", 
                                                                  sep="-", format = "%d-%m-%y")))
 head(gasoline_month)
