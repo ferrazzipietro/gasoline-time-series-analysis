@@ -10,3 +10,5 @@
 
 # User-specific files
 .Ruserdata
+.RData/*
+.Rhistory/*
