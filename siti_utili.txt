@@ -17,3 +17,9 @@ gasoline price https://dgsaie.mise.gov.it/prezzi_carburanti_mensili.php?lang=en_
 gas import https://dgsaie.mise.gov.it/importazioni-gas-naturale
 
 energy production https://www.terna.it/it/sistema-elettrico/statistiche/pubblicazioni-statistiche
+
+ESPLICATIVE:
+
+Databases con dati su emissioni ecc http://emissioni.sina.isprambiente.it/inventario-nazionale/
+
+Vehicols CO2 emissions CO2_TOTAL at http://emissioni.sina.isprambiente.it/serie-storiche-emissioni/
