@@ -7,34 +7,13 @@ library(tseries)
 library(astsa)
 library(knitr)
 library(readxl)
-install.packages("readxl")
+
 
 ## READ and PREPARE DATA
 
 gasoline_month <- read.csv("data/prezzi_mensili_benzina_dal_1996_a_20221028.csv")
 gasoline_month <- gasoline_month %>% mutate(date = as.Date(paste(ANNO, CODICE_MESE, "01", 
                                                                  sep="-", format = "%d-%m-%y")))
-
-co2_emissions_vehicles <- read_xlsx("data/DatiCopertTrasportoStrada1990-2020.xlsx",
-                           sheet = "CO2_TOTAL") # The last columns *T are the totals
-cols_to_be_kept <- colnames(co2_emissions_vehicles)[grepl("*T", colnames(co2_emissions_vehicles))]
-cols_to_be_kept <- cols_to_be_kept[7:31]
-co2_emissions_vehicles <- co2_emissions_vehicles %>% select(all_of(colnames(co2_emissions_vehicles)[1:6]),
-                                                            all_of(cols_to_be_kept))
-co2_emissions_vehicles <- co2_emissions_vehicles %>% filter()
-
-km_by_vehicles <- read_xlsx("data/DatiCopertTrasportoStrada1990-2020.xlsx",
-                                    sheet = "veickm") # The last columns *T are the totals
-cols_to_be_kept <- c(1:4, 11:ncol(km_by_vehicles))
-km_by_vehicles <- km_by_vehicles[,cols_to_be_kept]
-
-oil_price <- read_xlsx("data/oil_price_monthy.xlsx")
-oil_price <- oil_price %>% mutate(Date = as.Date(Month))
-oil_price <- oil_price %>% filter(Date >= as.Date("1996-01-01")) %>%
-  select(Date, Price)
-
-## CREATING NEW VARIABLE CO2/km
-# create the ratio btw co2 emitted and km done. This could be interesting
 
 
 ## EXPLORATORY AN.
