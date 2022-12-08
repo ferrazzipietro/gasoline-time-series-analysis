@@ -46,9 +46,11 @@ yearly_CO2emission_km_ratio <- weighted_avg_col(km_emissions_veh)
 
 #oil price
 oil_price <- read_xlsx("data/oil_price_monthy.xlsx")
-oil_price <- oil_price %>% mutate(Date = as.Date(Month))
-oil_price <- oil_price %>% filter(Date >= as.Date("1996-01-01")) %>%
-  select(Date, Price)
+oil_price <- oil_price %>% 
+  mutate(Date = as.Date(Month))%>% 
+  rename(oil_price=Price)%>% 
+  filter(Date >= as.Date("1996-01-01")) %>%
+  select(Date, oil_price)
 
 #employement rate
 empl_rate <- read.csv('data/employement_rate_monthly.csv')
@@ -60,16 +62,32 @@ empl_rate <- empl_rate %>%
   rename(empl_rate=Value) %>% 
   arrange(date)
 
+#euro vs dollar rate
+eur_dollar <- read.csv('data/euro_usd_rate.csv')
+eur_dollar <- eur_dollar %>% mutate(date=as.Date(Date), euro_dollar_rate=Adj.Close) %>%
+  select(date, euro_dollar_rate)
+
+# eni stocks
+eni <- read.csv('data/eni_stock_data.csv')
+eni <- eni %>%
+  mutate(date=as.Date(Date), eni_stocks_val = Adj.Close) %>%
+  filter(date >= as.Date('1996-01-01')) %>%
+  select(date, eni_stocks_val)
+plot(eni$eni_stocks_val~eni$date, type='b')
+
 # build the final data set
-oil_price <- oil_price %>% rename(oil_price=Price)
 tmp <- merge(gasoline_month, yearly_CO2emission_km_ratio, by.x='YEAR', by.y='year')
 tmp <- tmp %>% mutate(date = as.Date(paste('1/',MONTH, '/', YEAR, sep=''),
                                        format="%d/%m/%Y"))
 tmp <- merge(tmp, oil_price, by.x='date', by.y='Date')
-data <- merge(tmp, empl_rate, by.x='date', by.y='date', all.x=T)
+tmp <- merge(tmp, empl_rate, by.x='date', by.y='date', all.x=T)
+tmp <- merge(tmp, eni, by.x='date', by.y='date', all.x=T)
+data <- merge(tmp, eur_dollar, by.x='date', by.y='date', all.x=T)
 
+#colnames(tmp)
 data <- data %>% select('date', 'PRICE', 'IVA_TAX', 'ACCISA_TAX', 'NET.PRICE', 'MONTH', 'MONTH_NAME', 'X',
-                        'weighted_emission', 'oil_price', 'empl_rate')
+                        'weighted_emission', 'oil_price', 'empl_rate', 'eni_stocks_val',
+                        'euro_dollar_rate')
 write.csv(data, 'data/merged_data.csv')
 
 
