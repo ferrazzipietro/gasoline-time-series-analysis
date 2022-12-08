@@ -55,6 +55,7 @@ eval_model<-function(val,pred_val)
 
 # Reading files and Primary visualisation
 gasoline_month <- read.csv("data/monthly_gasoline_prices_1996_2022.csv")
+#gasoline_month <- read.csv("data/merged_data.csv")
 gasoline_month$DATE <- as.Date(gasoline_month$DATE, "%Y-%m-%d")
 plot(gasoline_month$PRICE ~ gasoline_month$DATE, type="l",
      main="gasoline total-price over time")

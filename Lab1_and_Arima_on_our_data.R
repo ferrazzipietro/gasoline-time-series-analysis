@@ -6,17 +6,16 @@ library(dplyr)
 library(tseries) 
 library(astsa)
 library(knitr)
-library(readxl)
+
 
 
 ## READ and PREPARE DATA
 
-gasoline_month <- read.csv("data/prezzi_mensili_benzina_dal_1996_a_20221028.csv")
-gasoline_month <- gasoline_month %>% mutate(date = as.Date(paste(ANNO, CODICE_MESE, "01", 
-                                                                 sep="-", format = "%d-%m-%y")))
+gasoline_month <- read.csv('data/merged_data.csv')
+gasoline_month$date <- gasoline_month$date %>% as.Date
+gasoline_month <- gasoline_month[,-1]
 
-
-## EXPLORATORY AN.
+## EXPLORATORY ANALISYS
 head(gasoline_month)
 
 plot(gasoline_month$PREZZO ~ gasoline_month$date, type="b",
@@ -25,27 +24,20 @@ plot(gasoline_month$NETTO ~ gasoline_month$date, type="b",
      main="gasoline net-price over time")
 
 
-##create a variable 'time'
+##create a variable 'trend'
 tt<- 1:NROW(gasoline_month)
 
 ##acf of variable "gasoline_month$NETTO "
 acf(gasoline_month$NETTO,  lag.max=100)
 
 ##fit a linear regression model 
-fit1 <- lm(gasoline_month$NETTO ~ tt)
+fit1 <- lm(NETTO ~ tt + oil_price + weighted_emission , data = gasoline_month)
 summary(fit1)
 
-##plot of the model
-plot(tt, gasoline_month$NETTO , xlab="Time", ylab="Facebook users")
-abline(fit1, col=3)
 
 ##check the residuals? are they autocorrelated? Test of DW
 dwtest(fit1)
-
-##check the residuals
-resfit1<- residuals(fit1)
-plot(resfit1,xlab="Time", ylab="residuals" )
-
+plot(fit1)
 
 # ##let us do the same with a linear model for time series, so we transform the data into a ts object
 # ts <- ts(gasoline_month$NETTO , frequency = 1)
@@ -93,5 +85,5 @@ acf(diff(log(gasoline_month$PREZZO)))
 pacf(diff(log(gasoline_month$PREZZO)))
 arima20 <- sarima(diff(log(gasoline_month$NETTO)), 2,0,0, no.constant=T) # pessime code
 shapiro.test(arima20$fit$residuals) # residui non normali
-
+par(mfrow=c(1,1))
 
