@@ -50,3 +50,44 @@ weighted_avg_col <- function(data){
                                   weighted_emission = weighted_emission)
   return(weighted_emission)
 }
+
+plot_predictions_NAs <- function(var, model, title){
+  time <- 1:nrow(data)
+  plot(var~time, main=paste(title, 'data vs predictions'),
+       sub = 'NAs will be substituted with the red line',
+       type='l')
+  pred <- predict(model, newdata = data.frame(var=var[is.na(var)], time=time[is.na(var)]))
+  points(pred~time[is.na(var)], col=2, type='p', pch=19)
+  return(pred)
+}
+
+substitute_NAs_polinomial_regr <- function(data, var_name, degrees = 3, save_result=F){
+  var <- (data %>% as.data.frame() %>% select(all_of(var_name)) )[,1]
+  time = 1:nrow(data)
+  print('You are asked to select the best degrees param. First, try different vals for the degrees par.')
+  if (degrees==1){
+    mod <- lm(var ~ time)
+    pred_NA <- plot_predictions_NAs(var, mod, 'degree = 1')
+  } else if (degrees==2) {
+    mod <- lm(var ~ time + I(time^2))
+    pred_NA <- plot_predictions_NAs(var, mod, 'degree = 2')
+  } 
+  else if (degrees==3) {
+    mod <- lm(var ~ time + I(time^2) + I(time^3))
+    pred_NA <- plot_predictions_NAs(var, mod, 'degree = 3')
+  } else if(degrees==4) {
+    mod <- lm(var ~ time + I(time^2) + I(time^3) + I(time^4))
+    pred_NA <- plot_predictions_NAs(var, mod, 'degree = 4')
+  }else if (degrees==5) {
+    mod <- lm(var ~ time + I(time^2) + I(time^3) + I(time^4) + + I(time^5))
+    pred_NA <- plot_predictions_NAs(var, mod, 'degree = 5')
+  } else print('The degree must been btw 1 and 5')
+  if(save_result) {
+    new_var <- var
+    new_var[is.na(var)] <- pred_NA
+    data <- data %>% mutate(!!var_name := new_var)
+  }
+  return(data)
+
+}
+

@@ -22,7 +22,7 @@ library(gam)
 
 vis_prediction<-function(val, pred_val){
   plot(val, type="l", main="gasoline total-price over time", xaxt = "n")
-  axis(1, at=c(1,60,120,180,240,300), labels=gasoline_month$YEAR[c(1,60,120,180,240,300)])
+  #axis(1, at=c(1,60,120,180,240,300), labels=gasoline_month$date[c(1,60,120,180,240,300)])
   lines(pred_val, lwd=2, col='red')
   abline(v=241,lty = 2)}
 
@@ -54,25 +54,33 @@ eval_model<-function(val,pred_val)
 
 
 # Reading files and Primary visualisation
-gasoline_month <- read.csv("data/monthly_gasoline_prices_1996_2022.csv")
-#gasoline_month <- read.csv("data/merged_data.csv")
-gasoline_month$DATE <- as.Date(gasoline_month$DATE, "%Y-%m-%d")
-plot(gasoline_month$PRICE ~ gasoline_month$DATE, type="l",
-     main="gasoline total-price over time")
-
-
+gasoline_month <- read.csv("data/merged_data.csv") %>% as_tibble() %>%
+  mutate(date = as.Date(date, "%Y-%m-%d"))
+n <- nrow(gasoline_month)
+gasoline_month %>% colnames()
+vars_idxs <- c(4, 5, 14:18)
+vars <- (gasoline_month %>% colnames)[vars_idxs]
 # train test split
 #training -- 75% 241 data points
 #testing --- 25% 80  data points
 
-train_data=gasoline_month[1:241,]
-test_data=gasoline_month[242:321,]
+replace_NA_with_0 <- T
+if (replace_NA_with_0) gasoline_month <- gasoline_month %>% replace(is.na(.), 0)
+
+explanatory <- F
+idx <- 241
+if (explanatory) idx <- n
+
+train_data=gasoline_month[1:idx,]
+test_data=gasoline_month[idx:n,]
 
 #***************************** Linear regression ***************************************#
 
-#linear_reg_model <- lm(PRICE ~ MONTH_NAME, data = train_data) #linear
-linear_reg_model <- lm(PRICE ~ MONTH_NAME + X,data = train_data) #multiple linear
+linear_reg_model <- lm(PRICE ~ MONTH + X + weighted_emission + oil_price + 
+                         empl_rate + eni_stocks_val + euro_dollar_rate,
+                       data = train_data) #multiple linear
 summary(linear_reg_model)
+plot(linear_reg_model)
 pred_linreg<-predict(linear_reg_model, newdata = gasoline_month)
 
 
@@ -91,9 +99,11 @@ eval_model(gasoline_month$PRICE,pred_linreg)
 #*************************************** GAM *******************************************#
 
 #Start with a linear model (df=1)
-plot(g3, se=T)
 
-gam_normal <- gam(PRICE~MONTH+X, data=train_data)
+gam_normal <- gam(PRICE~MONTH + X + weighted_emission +  oil_price + 
+                    empl_rate + eni_stocks_val + euro_dollar_rate,
+                  data=train_data)
+summary(gam_normal)
 pred_gam_normal <- predict(gam_normal, newdata=gasoline_month)
 vis_prediction(gasoline_month$PRICE,pred_gam_normal)
 vis_residual(gam_normal)
@@ -101,24 +111,31 @@ eval_model(gasoline_month$PRICE,pred_gam_normal)
 
 #Perform stepwise selection using gam scope
 #Values for df should be greater than 1, with df=1 implying a linear fit
+only_interesting_vars <- train_data[,vars_idxs] %>% mutate(response=train_data$PRICE)
+scope <- ncol(only_interesting_vars) # PRICE column
+sc = gam.scope(only_interesting_vars[,-scope], response=scope, arg=c("df=2","df=3","df=4"))
+gam_s<- step.Gam(gam_normal, scope=sc, trace=F)
+summary(gam_s)
+AIC(gam_s)
+par(mfrow=c(3,2))
+plot(gam_s, se=T)
+par(mfrow=c(1,1))
 
-sc = gam.scope(gasoline_month$MONTH+gasoline_month$X, response=gasoline_month$PRICE, arg=c("df=2","df=3","df=4"))
-gam_step<- step.Gam(gam_normal, scope=sc, trace=T)
-summary(g4)
-
-### gam with s
-g1 <- gam(NZ~s(tt)+seas+s(Japan))
-
-
-gam_s <- gam(PRICE~s(MONTH+X), data=train_data)
 pred_gam_s <- predict(gam_s, newdata=gasoline_month)
 vis_prediction(gasoline_month$PRICE,pred_gam_s)
 vis_residual(gam_s)
 eval_model(gasoline_month$PRICE,pred_gam_s)
 
 ### gam with loess
-
-gam_loess <- gam(PRICE~lo(MONTH+X), data=train_data)
+sc_loess = gam.scope(only_interesting_vars[,-scope], response=scope, arg=c("df=2","df=3","df=4"),
+                     smoother = 'lo')
+gam_loess<- step.Gam(gam_normal, scope=sc_loess, trace=F)
+summary(gam_loess)
+AIC(gam_s)
+AIC(gam_loess)
+par(mfrow=c(3,2))
+plot(gam_s, se=T)
+par(mfrow=c(1,1))
 pred_gam_loess <- predict(gam_loess, newdata=gasoline_month)
 vis_prediction(gasoline_month$PRICE,pred_gam_loess)
 vis_residual(gam_loess)
@@ -126,10 +143,15 @@ eval_model(gasoline_month$PRICE,pred_gam_loess)
 
 
 
-
 #***************************** Gradient Boosting ***************************************#
 
-gbm = gbm(PRICE~MONTH+X, data = train_data,distribution = "gaussian", cv.folds = 10,shrinkage = .01,n.minobsinnode = 10, n.trees = 500)
+gbm = gbm(PRICE~MONTH + X + weighted_emission + oil_price + 
+            empl_rate + eni_stocks_val + euro_dollar_rate,
+          data = train_data,distribution = "gaussian", 
+          cv.folds = 10,
+          shrinkage = .01,
+          n.minobsinnode = 10, 
+          n.trees = 500)
 
 pred_gbm <- predict(gbm, newdata=gasoline_month)
 vis_prediction(gasoline_month$PRICE,pred_gbm)

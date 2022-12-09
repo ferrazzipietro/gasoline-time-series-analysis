@@ -48,7 +48,7 @@ yearly_CO2emission_km_ratio <- weighted_avg_col(km_emissions_veh)
 oil_price <- read_xlsx("data/oil_price_monthy.xlsx")
 oil_price <- oil_price %>% 
   mutate(Date = as.Date(Month))%>% 
-  rename(oil_price=Price)%>% 
+  dplyr::rename(oil_price=Price)%>% 
   filter(Date >= as.Date("1996-01-01")) %>%
   select(Date, oil_price)
 
@@ -59,7 +59,7 @@ empl_rate <- empl_rate %>%
          Sesso == 'totale', ETA1=='Y15-64') %>% 
   mutate(date = as.Date(paste(TIME, '-01', sep=''), format="%Y-%m-%d")) %>% 
   select(date, Value) %>%
-  rename(empl_rate=Value) %>% 
+  dplyr::rename(empl_rate=Value) %>% 
   arrange(date)
 
 #euro vs dollar rate
@@ -73,21 +73,27 @@ eni <- eni %>%
   mutate(date=as.Date(Date), eni_stocks_val = Adj.Close) %>%
   filter(date >= as.Date('1996-01-01')) %>%
   select(date, eni_stocks_val)
-plot(eni$eni_stocks_val~eni$date, type='b')
 
 # build the final data set
-tmp <- merge(gasoline_month, yearly_CO2emission_km_ratio, by.x='YEAR', by.y='year')
+tmp <- merge(gasoline_month, yearly_CO2emission_km_ratio, by.x='YEAR', by.y='year',all.x=T)
 tmp <- tmp %>% mutate(date = as.Date(paste('1/',MONTH, '/', YEAR, sep=''),
                                        format="%d/%m/%Y"))
-tmp <- merge(tmp, oil_price, by.x='date', by.y='Date')
-tmp <- merge(tmp, empl_rate, by.x='date', by.y='date', all.x=T)
-tmp <- merge(tmp, eni, by.x='date', by.y='date', all.x=T)
-data <- merge(tmp, eur_dollar, by.x='date', by.y='date', all.x=T)
+tmp <- merge(tmp, oil_price, by.x='date', by.y='Date', all=T)
+tmp <- merge(tmp, empl_rate, by.x='date', by.y='date', all=T)
+tmp <- merge(tmp, eni, by.x='date', by.y='date', all=T)
+data <- merge(tmp, eur_dollar, by.x='date', by.y='date', all=T)
+rows_with_no_price_available <- which(is.na(data$PRICE))
+data <- data[-rows_with_no_price_available,]
 
 #colnames(tmp)
-data <- data %>% select('date', 'PRICE', 'IVA_TAX', 'ACCISA_TAX', 'NET.PRICE', 'MONTH', 'MONTH_NAME', 'X',
+data <- data %>% select('date', 'PRICE', 'IVA_TAX', 'ACCISA_TAX', 'NET.PRICE', 'MONTH', 'X',
                         'weighted_emission', 'oil_price', 'empl_rate', 'eni_stocks_val',
                         'euro_dollar_rate')
+
+########## NAs sobstitution ########## 
+data <-  data %>% 
+  substitute_NAs_polinomial_regr('euro_dollar_rate', degrees=2, save_result = T) %>%
+  substitute_NAs_polinomial_regr('weighted_emission', degrees=1, save_result = T) %>%
+  substitute_NAs_polinomial_regr('empl_rate', degrees=3, save_result = T)
+
 write.csv(data, 'data/merged_data.csv')
-
-
