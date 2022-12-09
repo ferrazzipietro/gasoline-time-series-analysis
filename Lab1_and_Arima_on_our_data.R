@@ -30,38 +30,7 @@ tt<- 1:NROW(gasoline_month)
 ##acf of variable "gasoline_month$NETTO "
 acf(gasoline_month$NETTO,  lag.max=100)
 
-##fit a linear regression model 
-fit1 <- lm(NETTO ~ tt + oil_price + weighted_emission , data = gasoline_month)
-summary(fit1)
-
-
-##check the residuals? are they autocorrelated? Test of DW
-dwtest(fit1)
-plot(fit1)
-
-# ##let us do the same with a linear model for time series, so we transform the data into a ts object
-# ts <- ts(gasoline_month$NETTO , frequency = 1)
-# ts.plot(ts, type="o")
-# 
-# ## we fit a linear model with the tslm function
-# fit_season<- tslm(ts~trend + season)
-# 
-# ###obviously it gives the same results of the first model
-# summary(fit_season)
-# dwtest(fit_season)
-# 
-# ##check the residuals
-# resfit_season<- residuals(fit_season)
-# plot(resfit_season,xlab="Time", ylab="residuals" )
-# acf(resfit_season)
-
-# ###plot of the model
-# plot(gasoline_month$NETTO, ylab="Gasoline price", xlab="Time")
-# lines(fitted(fit_season), col=2)
-
-
 # ARIMA
-
 
 plot(diff(log(gasoline_month$NETTO)) ~ gasoline_month$date[-1], type="b",
      main="differentiate (lag1) log-gasoline price over time")

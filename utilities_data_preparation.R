@@ -64,7 +64,6 @@ plot_predictions_NAs <- function(var, model, title){
 substitute_NAs_polinomial_regr <- function(data, var_name, degrees = 3, save_result=F){
   var <- (data %>% as.data.frame() %>% select(all_of(var_name)) )[,1]
   time = 1:nrow(data)
-  print('You are asked to select the best degrees param. First, try different vals for the degrees par.')
   if (degrees==1){
     mod <- lm(var ~ time)
     pred_NA <- plot_predictions_NAs(var, mod, 'degree = 1')
@@ -90,4 +89,3 @@ substitute_NAs_polinomial_regr <- function(data, var_name, degrees = 3, save_res
   return(data)
 
 }
-

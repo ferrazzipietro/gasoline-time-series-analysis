@@ -56,6 +56,8 @@ eval_model<-function(val,pred_val)
 # Reading files and Primary visualisation
 gasoline_month <- read.csv("data/merged_data.csv") %>% as_tibble() %>%
   mutate(date = as.Date(date, "%Y-%m-%d"))
+gasoline_month[,-c(1,3,4,5,6,7, 13)]
+
 n <- nrow(gasoline_month)
 gasoline_month %>% colnames()
 vars_idxs <- c(4, 5, 14:18)
