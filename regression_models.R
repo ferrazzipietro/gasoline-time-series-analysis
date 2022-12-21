@@ -1,11 +1,4 @@
-
-# OLS linear regression
-# include variables
-# Gradient boosting
-# GAM model
-setwd("~/Desktop/gasoline-time-series-analysis")
-options(warn=0)
-#install.packages('gam')
+#setwd("~/Desktop/gasoline-time-series-analysis")
 library(readxl)
 library(lmtest) 
 library(forecast)
@@ -18,50 +11,24 @@ library(knitr)
 library(gbm)
 library(caret)
 library(gam)
-
-
-vis_prediction<-function(val, pred_val){
-  plot(val, type="l", main="gasoline total-price over time", xaxt = "n")
-  #axis(1, at=c(1,60,120,180,240,300), labels=gasoline_month$date[c(1,60,120,180,240,300)])
-  lines(pred_val, lwd=2, col='red')
-  abline(v=241,lty = 2)}
-
-vis_residual<-function(model){
-  par(mfrow=c(1,2))
-  plot(residuals(model),type='l',main="Residual Time Series Plot")
-  acf(residuals(model),main="Residual ACF Plot")
-  par(mfrow=c(1,1))}
-
-eval_model<-function(val,pred_val)
-{
-  residuals = val - pred_val
-  RMSE = sqrt(mean(residuals^2))
-  cat('The root mean square error of the test data is ', round(RMSE,3),'\n')
-  
-  y_test_mean = mean(val)
-  # Calculate total sum of squares
-  tss =  sum((val - y_test_mean)^2 )
-  # Calculate residual sum of squares
-  rss =  sum(residuals^2)
-  # Calculate R-squared
-  rsq  =  1 - (rss/tss)
-  cat('The R-square of the test data is ', round(rsq,3), '\n')
-  
-}
-
-
-#suppressMessages(library(dplyr))
-
+source('utilities_models.R')
+# library(devtools)
+# setwd('/Users/pietroferrazzi/Desktop/uni/times_series/progetto')
+# setwd('./GasolinePackage/')
+# install('GasolinePackage')
+# setwd('/Users/pietroferrazzi/Desktop/uni/times_series/progetto/gasoline-time-series-analysis/')
 
 # Reading files and Primary visualisation
-gasoline_month <- read.csv("data/merged_data.csv") %>% as_tibble() %>%
-  mutate(date = as.Date(date, "%Y-%m-%d"))
-gasoline_month[,-c(1,3,4,5,6,7, 13)]
-
+gasoline_month <- open_data("data/merged_data.csv")
+vars_idxs <- 2:ncol(gasoline_month)
 n <- nrow(gasoline_month)
-gasoline_month %>% colnames()
-vars_idxs <- c(4, 5, 14:18)
-vars <- (gasoline_month %>% colnames)[vars_idxs]
+vars <- (gasoline_month %>% colnames)
+
+
+
+FORECAST = TRUE
+if(FORECAST) gasoline_month <- generate_data_for_forecast(gasoline_month, 3)
+
 # train test split
 #training -- 75% 241 data points
 #testing --- 25% 80  data points
@@ -69,28 +36,21 @@ vars <- (gasoline_month %>% colnames)[vars_idxs]
 replace_NA_with_0 <- T
 if (replace_NA_with_0) gasoline_month <- gasoline_month %>% replace(is.na(.), 0)
 
-explanatory <- F
+EXPLANATORY <- F
 idx <- 241
-if (explanatory) idx <- n
+if (EXPLANATORY) idx <- n
 
 train_data=gasoline_month[1:idx,]
 test_data=gasoline_month[idx:n,]
 
 #***************************** Linear regression ***************************************#
 
-linear_reg_model <- lm(PRICE ~ MONTH + X + weighted_emission + oil_price + 
-                         empl_rate + eni_stocks_val + euro_dollar_rate,
+linear_reg_model <- lm(PRICE ~ MONTH + X + weighted_emission  + 
+                         empl_rate  + euro_dollar_rate,
                        data = train_data) #multiple linear
 summary(linear_reg_model)
 plot(linear_reg_model)
 pred_linreg<-predict(linear_reg_model, newdata = gasoline_month)
-
-
-#plot(gasoline_month$DATE,gasoline_month$PRICE, type="l", main="gasoline total-price over time")
-#axis(1, at=c(1,60,120,180,240,300), labels=gasoline_month$YEAR[c(1,60,120,180,240,300)])
-#lines(gasoline_month$DATE,pred_linreg, lwd=2, col='red')
-#abline(gasoline_month$DATE,v=241,type='d')
-#tsdisplay(residuals(linear_reg_model))
 
 vis_prediction(gasoline_month$PRICE,pred_linreg)
 vis_residual(linear_reg_model)
@@ -166,4 +126,53 @@ acf(residue,main="Residual ACF Plot")
 par(mfrow=c(1,1))
 
 eval_model(gasoline_month$PRICE,pred_gbm)
+
+##### ARIMA ###########
+
+## READ and PREPARE DATA
+
+gasoline_month <- read.csv('data/merged_data.csv')
+gasoline_month$date <- gasoline_month$date %>% as.Date
+gasoline_month <- gasoline_month[,-1]
+
+## EXPLORATORY ANALISYS
+head(gasoline_month)
+
+plot(gasoline_month$PRICE ~ gasoline_month$date, type="b",
+     main="gasoline total-price over time")
+plot(gasoline_month$NETTO ~ gasoline_month$date, type="b",
+     main="gasoline net-price over time")
+
+
+##create a variable 'trend'
+tt<- 1:NROW(gasoline_month)
+
+##acf of variable "gasoline_month$NETTO "
+acf(gasoline_month$PRICE,  lag.max=100)
+
+# ARIMA
+
+plot(diff(log(gasoline_month$PRICE)) ~ gasoline_month$date[-1], type="b",
+     main="differentiate (lag1) log-gasoline price over time")
+
+adf.test(diff(log(gasoline_month$PRICE))) # la diff. è stazionaria
+
+par(mfrow=c(1,2))
+acf(diff(gasoline_month$PRICE))
+pacf(diff(gasoline_month$PRICE))
+arima21 <- sarima(log(gasoline_month$PRICE), 2,1,0)
+
+# NET PRICE (NO TAXES)
+#par(mfrow=c(1,1))
+plot(gasoline_month$NETTO ~ gasoline_month$date, type="b",
+     main="net gasoline price over time")
+
+plot(diff(log(gasoline_month$NETTO)) ~ gasoline_month$date[-1], type="b",
+     main="differentiate (lag1) log- net gasoline price over time")
+par(mfrow=c(1,2))
+acf(diff(log(gasoline_month$PREZZO)))
+pacf(diff(log(gasoline_month$PREZZO)))
+arima20 <- sarima(diff(log(gasoline_month$NETTO)), 2,0,0, no.constant=T) # pessime code
+shapiro.test(arima20$fit$residuals) # residui non normali
+par(mfrow=c(1,1))
 
