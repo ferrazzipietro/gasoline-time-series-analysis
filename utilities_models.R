@@ -66,6 +66,9 @@ eval_model<-function(val,pred_val)
 #' @param model model to be evaluated.
 #' @param all_data full dataset (containing both train and test)
 #' @param test_data test data
+#' @param LASSO true if the model is a LASSO regression, false otherwise
+#' @param ARIMA true if the model is an ARIMA regression, false otherwise
+#' @param lambda_opt_index to be used only for LASSO. Provide the index of optimal value of lambda 
 #' @value return the RMSE of the model on the test data, the predictions on the all
 #' data and the predictions on the test data.
 #' @examples
@@ -76,24 +79,39 @@ eval_model<-function(val,pred_val)
 #' train_data <- gasoline_month[1:idx,]
 #' test_data <- gasoline_month[idx:n,]
 #' model_evaluation(linear_reg_model, gasoline_month, test_data)
-model_evaluation <- function(model, all_data, test_data, print_AIC = T, ARIMA=F){
+model_evaluation <- function(model, all_data, test_data, print_AIC = T, ARIMA=F, LASSO = F, lambda_opt_index=NULL){
   n_test <- nrow(test_data)
+  if(LASSO & ARIMA){
+    cat('LASSO and ARIMA cannot be TRUE at the same time')
+    return(-1)
+  }
+  par(mfrow=c(2,2))
   if(ARIMA){
     pred_test_data <- predict(model$fit, n.ahead=n_test)
     pred_test_data <- pred_test_data$pred
-  } 
-
-  if(! ARIMA){
+  }else if(LASSO){
+    pred_all_data <- predict(model, newx = all_data %>% 
+                               select(MONTH, X, weighted_emission, empl_rate, 
+                                      euro_dollar_rate, oil_price, eni_stocks_val) %>%
+                               as.matrix)
+    pred_all_data <- pred_all_data[,lambda_opt_index]
+    pred_test_data <- predict(model, newx = test_data %>% 
+                                select(MONTH, X, weighted_emission, empl_rate, 
+                                       euro_dollar_rate, oil_price, eni_stocks_val) %>%
+                                as.matrix)
+    pred_test_data <- pred_test_data[,lambda_opt_index]
+    vis_prediction(all_data$PRICE, pred_all_data)
+    vis_residual(linear_reg_model)
+    eval_model(all_data$PRICE, pred_all_data)  
+  }else{
     pred_all_data <- predict(model, newdata = all_data)
     pred_test_data <- predict(model, newdata = test_data)
     if(print_AIC) cat('The AIC of the model is ', AIC(model),'\n')
-    par(mfrow=c(2,2))
     vis_prediction(all_data$PRICE,pred_all_data)
     vis_residual(linear_reg_model)
     eval_model(all_data$PRICE, pred_all_data)  
-    par(mfrow=c(1,1))
   }
-
+  par(mfrow=c(1,1))
   rmse <- rmse(test_data$PRICE, pred_test_data)
   cat('The root mean square error of the test data is ', round(rmse,3),'\n')
   
