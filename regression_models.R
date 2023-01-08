@@ -1,4 +1,5 @@
 #setwd("~/Desktop/gasoline-time-series-analysis")
+setwd("D:/OneDrive/Master/BDMA/Courses/Semester_3/Time_Series_Analysis/Project/gasoline-time-series-analysis")
 library(readxl)
 library(lmtest) 
 library(forecast)
@@ -32,6 +33,8 @@ train_data <- gasoline_month[1:idx,]
 test_data <- gasoline_month[idx:n,]
 n_test <- nrow(test_data)
 
+train_data
+
 
 #***************************** Linear regression ***************************************#
 
@@ -42,6 +45,35 @@ summary(linear_reg_model)
 plot(linear_reg_model)
 
 eval_linear <- model_evaluation(linear_reg_model, gasoline_month, test_data)
+
+#***************************** Lasso regression ***************************************#
+
+lasso_reg_model <- glmnet(y = PRICE % ~ MONTH + X + weighted_emission  + 
+                            empl_rate  + euro_dollar_rate,
+                          data = train_data)
+
+# extract predictors
+predictors <- train_data[,c("weighted_emission", "oil_price", "empl_rate", "eni_stocks_val", "euro_dollar_rate")]
+# extract response variable
+response <- train_data$PRICE
+
+# extract predictors from test data
+test_predictors <- test_data[,c("weighted_emission", "oil_price", "empl_rate", "eni_stocks_val", "euro_dollar_rate")]
+# extract response from test data
+test_response <- test_data$PRICE
+
+lasso_reg_model <- glmnet(predictors,response) 
+summary(lasso_reg_model)
+plot(lasso_reg_model)
+
+predictions <- predict(lasso_reg_model, as.matrix(test_predictors))
+
+mean((predictions - test_response)^2)
+
+plot(1:nrow(predictions), predictions)
+
+
+eval_linear <- model_evaluation(lasso_reg_model, gasoline_month, test_data)
 
 #*************************************** GAM *******************************************#
 
