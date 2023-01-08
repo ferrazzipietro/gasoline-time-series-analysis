@@ -51,8 +51,7 @@ weighted_avg_col <- function(data){
   return(weighted_emission)
 }
 
-plot_predictions_NAs <- function(var, model, title){
-  time <- 1:nrow(data)
+plot_predictions_NAs <- function(var, model, title, time){
   plot(var~time, main=paste(title, 'data vs predictions'),
        sub = 'NAs will be substituted with the red line',
        type='l')
@@ -66,20 +65,20 @@ substitute_NAs_polinomial_regr <- function(data, var_name, degrees = 3, save_res
   time = 1:nrow(data)
   if (degrees==1){
     mod <- lm(var ~ time)
-    pred_NA <- plot_predictions_NAs(var, mod, 'degree = 1')
+    pred_NA <- plot_predictions_NAs(var, mod, 'degree = 1', time)
   } else if (degrees==2) {
     mod <- lm(var ~ time + I(time^2))
-    pred_NA <- plot_predictions_NAs(var, mod, 'degree = 2')
+    pred_NA <- plot_predictions_NAs(var, mod, 'degree = 2', time)
   } 
   else if (degrees==3) {
     mod <- lm(var ~ time + I(time^2) + I(time^3))
-    pred_NA <- plot_predictions_NAs(var, mod, 'degree = 3')
+    pred_NA <- plot_predictions_NAs(var, mod, 'degree = 3', time)
   } else if(degrees==4) {
     mod <- lm(var ~ time + I(time^2) + I(time^3) + I(time^4))
-    pred_NA <- plot_predictions_NAs(var, mod, 'degree = 4')
+    pred_NA <- plot_predictions_NAs(var, mod, 'degree = 4', time)
   }else if (degrees==5) {
     mod <- lm(var ~ time + I(time^2) + I(time^3) + I(time^4) + + I(time^5))
-    pred_NA <- plot_predictions_NAs(var, mod, 'degree = 5')
+    pred_NA <- plot_predictions_NAs(var, mod, 'degree = 5', time)
   } else print('The degree must been btw 1 and 5')
   if(save_result) {
     new_var <- var

@@ -41,7 +41,8 @@ preprocess_km_by_vehicles <- function(km_by_vehicles, co2_emissions_vehicles){
   
   # co2_emission/km ratio
   km_emissions_veh <- merge(co2_emissions_vehicles, km_by_vehicles) %>% as_tibble()
-  km_emissions_veh <- calculate_ratio_cols(km_emissions_veh)
+  km_emissions_veh <- calculate_ratio_cols(km_emissions_veh) %>% 
+    mutate()
   return(km_emissions_veh)
 }
 
@@ -116,15 +117,20 @@ main <- function(){
   
   write.csv(data, 'data/merged_data_NAs.csv')
   
-  if(args[1]=="true" | args[1]=="True" | args[1]=="TRUE"){ 
+  #if(args[1]=="true" | args[1]=="True" | args[1]=="TRUE"){ 
     # NAs inference
     data <-  data %>% 
       substitute_NAs_polinomial_regr('euro_dollar_rate', degrees=2, save_result = T) %>%
       substitute_NAs_polinomial_regr('weighted_emission', degrees=1, save_result = T) %>%
       substitute_NAs_polinomial_regr('empl_rate', degrees=3, save_result = T)
     
+    smoothed_weighted_emission <- smooth.spline(data$weighted_emission,df=20)
+    data <- data %>% mutate(weighted_emission=smoothed_weighted_emission$y)
     write.csv(data, 'data/merged_data.csv')
-  }
+  #}
+    
+  
 }
 
 main()
+
