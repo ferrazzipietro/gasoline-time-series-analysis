@@ -39,7 +39,7 @@ vis_prediction<-function(val, pred_val){
 
 vis_residual<-function(model){
   plot(residuals(model),type='l',main="Residual Time Series Plot")
-  acf(residuals(model),main="Residual ACF Plot")
+  acf(residuals(model),main="Residual ACF Plot", lwd=3)
   }
 
 eval_model<-function(val,pred_val)
