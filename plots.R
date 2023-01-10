@@ -6,7 +6,7 @@ suppressMessages(library(reshape))
 suppressMessages(library(rlist))
 options(warn=-1)
 
-plot_each_single_ts <- function(data, variables_names, my_theme, col='darkblue', linewidth=3){
+plot_each_single_ts <- function(data, variables_names, my_theme, col='#0E1423', linewidth=3){
   gg <- ggplot(data, aes(x=date))
   for (var in variables_names){
     png(paste('plots/variables_ts/', var, '_ts_plot.png',sep=''),  width = 1200, heigh = 750)
@@ -33,7 +33,7 @@ plot_variables_vs_price <- function(data, variables_names, my_theme){
     plot <- ggplot(data = df.melted, aes(x = date, y = value, color = variable, 
                                          linetype = variable)) +  
       geom_line(linewidth=3)  +
-      scale_fill_manual(values = c('blue4','blue'), 
+      scale_fill_manual(values = c(1,'grey'), 
                         aesthetics = c("colour"),
                         labels=c(var, 'gasoline price')) +
       my_theme +
@@ -47,9 +47,32 @@ plot_variables_vs_price <- function(data, variables_names, my_theme){
   }
 }
 
+
+set_my_theme <- function(){
+  my_theme <- theme(axis.title = element_text(face='bold', color=1, size = 35),
+                    axis.text = element_text( color=1, size = 20),
+                    panel.background = element_blank(),
+                    panel.grid = element_line(linetype = 2, colour = 1, linewidth=0.3))
+  return(my_theme)
+}
+
+main <- function(){
+  data <- read.csv('data/merged_data_NAs.csv') %>% as_tibble %>% 
+    mutate(date=as.Date(date))
+  vars <- (data %>% colnames)[-1]
+  n <- nrow(data)
+  objective_variable = 'PRICE'
+  
+  my_theme <- set_my_theme()
+  
+  plot_each_single_ts(data, c(vars, objective_variable), my_theme )
+  plot_each_single_ts(data, vars, my_theme)
+}
+
+
 ## USELESS FUNCTIION ##
 explainatory_vars_vs_themselves <- function(){
-  mycolors <- c("corr"="royalblue", "Corr"="lightblue")
+  mycolors <- c("corr"=1, "Corr"='grey')
   ggpairs(data %>% select(all_of(vars)),
           aes(col=rep("corr",n),
               fill=rep("Corr",n),
@@ -60,27 +83,3 @@ explainatory_vars_vs_themselves <- function(){
           axis.text=element_blank(),
           axis.ticks=element_blank())
 }
-
-set_my_theme <- function(){
-  my_theme <- theme(axis.title = element_text(face='bold', color='darkblue', size = 35),
-                    axis.text = element_text( color='darkblue', size = 20),
-                    panel.background = element_blank(),
-                    panel.grid = element_line(linetype = 2, colour = 'darkblue', linewidth=0.3))
-  return(my_theme)
-}
-
-main <- function(){
-  data <- read.csv('data/merged_data_NAs.csv') %>% as_tibble %>% 
-    mutate(date=as.Date(date))
-  vars <- (data %>% colnames)[c(8:12)]
-  n <- nrow(data)
-  objective_variable = 'PRICE'
-  
-  my_theme <- set_my_theme()
-  
-  plot_each_single_ts(data, c(vars, objective_variable), my_theme )
-  plot_each_single_ts(data, vars, my_theme)
-}
-
-main()
-
