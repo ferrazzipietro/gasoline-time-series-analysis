@@ -17,6 +17,7 @@ plot_each_single_ts <- function(data, variables_names, my_theme, col='#0E1423', 
     print(plot)
     dev.off()
   }
+  plot
 }
 
 plot_variables_vs_price <- function(data, variables_names, my_theme){
@@ -59,14 +60,14 @@ set_my_theme <- function(){
 main <- function(){
   data <- read.csv('data/merged_data_NAs.csv') %>% as_tibble %>% 
     mutate(date=as.Date(date))
-  vars <- (data %>% colnames)[-1]
+  vars <- (data %>% colnames)[-c(1,2)]
   n <- nrow(data)
   objective_variable = 'PRICE'
   
   my_theme <- set_my_theme()
   
   plot_each_single_ts(data, c(vars, objective_variable), my_theme )
-  plot_each_single_ts(data, vars, my_theme)
+  plot_variables_vs_price(data, vars, my_theme)
 }
 
 

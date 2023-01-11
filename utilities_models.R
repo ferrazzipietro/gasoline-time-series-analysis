@@ -31,9 +31,9 @@ open_data <- function(path_to_file){
 #' This function allows you to express your love of cats.
 #' @param path_to_file path to the CSV file to be opened
 vis_prediction<-function(val, pred_val){
-  plot(val, type="l", main="gasoline total-price over time", xaxt = "n", ylab='PRICE')
+  plot(val, type="l", main="gasoline total-price over time", xaxt = "n", ylab='PRICE (euro * 1000)')
   axis(1, at=c(1,60,120,180,240,300), labels=gasoline_month$date[c(1,60,120,180,240,300)])
-  lines(pred_val, lwd=2, col='red')
+  lines(pred_val, lwd=2, col='#21A78E')
   abline(v=241,lty = 2)
 }
 

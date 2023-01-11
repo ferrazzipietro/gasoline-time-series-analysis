@@ -36,13 +36,19 @@ n_test <- nrow(test_data)
 
 #***************************** Linear regression ***************************************#
 
-linear_reg_model <- lm(PRICE ~ MONTH + X + weighted_emission  + 
+linear_reg_model <- lm(PRICE ~ as.factor(MONTH) + X + weighted_emission  + 
                          empl_rate  + euro_dollar_rate + oil_price + eni_stocks_val,
                        data = train_data) 
 summary(linear_reg_model)
 plot(linear_reg_model)
 
+linear_reg_model <- lm(PRICE ~ as.factor(MONTH) + X + weighted_emission  + 
+                         empl_rate  + euro_dollar_rate + oil_price ,
+                       data = train_data) 
+summary(linear_reg_model)
+
 eval_linear <- model_evaluation(linear_reg_model, gasoline_month, test_data)
+
 
 #***************************** Lasso regression ***************************************#
 
@@ -64,7 +70,6 @@ lambda_opt <- lasso_reg_model$lambda[lambda_opt_ind]
 predict(lasso_reg_model, type="coefficients", s=lambda_opt) # vettore dei coefficienti ottimi stimati
 summary(lasso_reg_model)
 pred.lasso <- previsione[,lambda_opt_ind]
-print(lasso_reg_model)
 
 eval_lasso <- model_evaluation(lasso_reg_model, gasoline_month, test_data, LASSO=T, lambda_opt_index=lambda_opt_ind)
 
@@ -75,9 +80,8 @@ eval_lasso <- model_evaluation(lasso_reg_model, gasoline_month, test_data, LASSO
 gam_normal <- gam(PRICE~MONTH + X + weighted_emission +  oil_price + 
                     empl_rate + eni_stocks_val + euro_dollar_rate,
                   data=train_data)
-#summary(gam_normal)
+summary(gam_normal)
 eval_gam_normal <- model_evaluation(gam_normal, gasoline_month, test_data)
-
 
 #Perform stepwise selection using gam scope
 #Values for df should be greater than 1, with df=1 implying a linear fit
@@ -92,6 +96,7 @@ plot(gam_s, se=T)
 par(mfrow=c(1,1))
 
 eval_gam_s <- model_evaluation(gam_s, gasoline_month, test_data)
+plot(gam_s)
 
 ### gam with loess
 sc_loess = gam.scope(only_interesting_vars[,-scope], response=scope, arg=c("df=2","df=3","df=4"),
@@ -137,6 +142,22 @@ eval_gam_normal$rmse
 eval_gam_s$rmse
 eval_gbm$rmse
 eval_arima$rmse
+
+
+
+res_lasso<- eval_lasso$predictions - gasoline_month$PRICE
+plot(res_lasso~gasoline_month$date, type='l', 
+     main='Is there heteroschedastity?', xlab='date')
+plot(acf(diff(res_lasso)))
+sarima_on_lasso <- sarima(res_lasso, 2,1,2, no.constant=T)
+sarima_on_lasso$ttable
+sarima_on_lasso$AIC 
+
+mod <- model_evaluation(sarima_on_lasso, gasoline_month, test_data, ARIMA=T)
+
+
+length(res_linear)
+plot(res_linear, mod$test_predictions)
 
 #*************************************** BASS MODEL *******************************************#
 bm <- BM(gasoline_month$PRICE,display = T)
