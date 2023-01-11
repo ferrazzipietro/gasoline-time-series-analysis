@@ -88,7 +88,7 @@ model_evaluation <- function(model, all_data, test_data, print_AIC = T, ARIMA=F,
   par(mfrow=c(2,2))
   if(ARIMA){
     pred_test_data <- predict(model$fit, n.ahead=n_test)
-    pred_test_data <- pred_test_data$pred
+    pred_test_data <- as.vector(pred_test_data$pred)
   }else if(LASSO){
     pred_all_data <- predict(model, newx = all_data %>% 
                                select(MONTH, X, weighted_emission, empl_rate, 
@@ -124,7 +124,7 @@ plot_ts_and_correlogram <- function(price, lag_max=100, differentiate=F, log_tra
   if(log_transform) price=log(price)
   if(differentiate) price <- diff(price)
   plot(price, type='l')
-  acf(price,  lag.max=100)
+  acf(price,  lag.max=100, lwd=3)
   par(mfrow=c(1,1))
   stationariety_test <- adf.test(price)
   cat('pval for alternative hypothesis: stationary = ', 

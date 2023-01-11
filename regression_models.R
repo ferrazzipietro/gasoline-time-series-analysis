@@ -40,7 +40,7 @@ linear_reg_model <- lm(PRICE ~ as.factor(MONTH) + X + weighted_emission  +
                          empl_rate  + euro_dollar_rate + oil_price + eni_stocks_val,
                        data = train_data) 
 summary(linear_reg_model)
-plot(linear_reg_model)
+#plot(linear_reg_model)
 
 linear_reg_model <- lm(PRICE ~ as.factor(MONTH) + X + weighted_emission  + 
                          empl_rate  + euro_dollar_rate + oil_price ,
@@ -127,7 +127,8 @@ price <- train_data$PRICE
 plot_ts_and_correlogram(price)
 plot_ts_and_correlogram(price, differentiate = T)
 
-sarima21 <- sarima(price, 2,1,0, no.constant=T)
+sarima21 <- sarima(price, 2,1,3, no.constant=T)
+sarima21$ttable
 pred <- predict(sarima21$fit, n.ahead=n_test)
 
 eval_arima <- model_evaluation(sarima21, gasoline_month, test_data, ARIMA=T)
@@ -143,21 +144,60 @@ eval_gam_s$rmse
 eval_gbm$rmse
 eval_arima$rmse
 
+rmse <- c(eval_linear$rmse,
+          eval_lasso$rmse,
+          #eval_gam_loess$rmse,
+          eval_gam_normal$rmse,
+          eval_gam_s$rmse,
+          eval_gbm$rmse,
+          eval_arima$rmse)
+plot(rmse/1000, pch=15, col='#21A78E', cex=2,
+     ylab='RMSE (€)',ylim=c(0.05,0.19), xlim=c(0,7))
+text(1:length(rmse), rmse/1000, c('linear', 'lasso', 'linear gam', 'spline gam',
+                                 'gbm', 'arima'), pos=1, offset = 1)
+grid()
 
+#******************** BEST MODEL: ARIMA over LASSO ***************************#
 
-res_lasso<- eval_lasso$predictions - gasoline_month$PRICE
-plot(res_lasso~gasoline_month$date, type='l', 
+res_lasso<- eval_lasso$predictions[1:idx] - train_data$PRICE
+plot(res_lasso~train_data$date, type='l', 
      main='Is there heteroschedastity?', xlab='date')
-plot(acf(diff(res_lasso)))
-sarima_on_lasso <- sarima(res_lasso, 2,1,2, no.constant=T)
-sarima_on_lasso$ttable
-sarima_on_lasso$AIC 
+acf(diff(res_lasso), lag.max = 80)
 
-mod <- model_evaluation(sarima_on_lasso, gasoline_month, test_data, ARIMA=T)
+arima_on_lasso <- sarima(res_lasso, 0,1,3, 0,1,1,S=12, no.constant = T,
+                         max.lag=50)
+
+arima_on_lasso$ttable
+arima_on_lasso_pred <- predict(arima_on_lasso$fit, n.ahead=n_test) 
+arima_on_lasso_pred <- arima_on_lasso_pred$pred %>% as.vector
+
+final_forecasts <- eval_lasso$predictions[(idx):n] + arima_on_lasso_pred
+
+plot(test_data$PRICE, type='l')
+points(1:65,final_forecasts, col=2, type='l')
+points(1:65,eval_lasso$predictions[(idx):n], col=3, type='l')
+
+rmse(test_data$PRICE,final_forecasts)
+rmse(test_data$PRICE, eval_lasso$test_predictions)
+plot(gasoline_month$PRICE, type='l')
 
 
-length(res_linear)
-plot(res_linear, mod$test_predictions)
+#******************** ARIMAX ***************************#
+arimax <- sarima(train_data$PRICE, 2,1,2, 1,0,0,S=12, 
+                          xreg = train_data %>% 
+                            select(weighted_emission,
+                                   empl_rate, euro_dollar_rate, 
+                                   oil_price, eni_stocks_val) %>%
+                            as.matrix
+                            , no.constant=T)
+
+arimax_pred <- predict(arimax$fit, newxreg=test_data %>% 
+                         select(weighted_emission,empl_rate, euro_dollar_rate, 
+                                oil_price, eni_stocks_val) %>% as.matrix,
+                       n.ahead=n_test)
+plot(test_data$PRICE, type='l')
+points(1:65,as.vector(arimax_pred$pred), col=2, type='l')
+rmse(test_data$PRICE,lasso_arima_pred$pred)
 
 #*************************************** BASS MODEL *******************************************#
 bm <- BM(gasoline_month$PRICE,display = T)
