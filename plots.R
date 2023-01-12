@@ -34,7 +34,7 @@ plot_variables_vs_price <- function(data, variables_names, my_theme){
     plot <- ggplot(data = df.melted, aes(x = date, y = value, color = variable, 
                                          linetype = variable)) +  
       geom_line(linewidth=3)  +
-      scale_fill_manual(values = c(1,'grey'), 
+      scale_fill_manual(values = c('#0F1422', '#21A78E'), 
                         aesthetics = c("colour"),
                         labels=c(var, 'gasoline price')) +
       my_theme +
@@ -70,6 +70,7 @@ main <- function(){
   plot_variables_vs_price(data, vars, my_theme)
 }
 
+main()
 
 ## USELESS FUNCTIION ##
 explainatory_vars_vs_themselves <- function(){

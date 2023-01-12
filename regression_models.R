@@ -70,6 +70,7 @@ lambda_opt <- lasso_reg_model$lambda[lambda_opt_ind]
 predict(lasso_reg_model, type="coefficients", s=lambda_opt) # vettore dei coefficienti ottimi stimati
 summary(lasso_reg_model)
 pred.lasso <- previsione[,lambda_opt_ind]
+lasso_reg_model$beta[,lambda_opt_ind]
 
 eval_lasso <- model_evaluation(lasso_reg_model, gasoline_month, test_data, LASSO=T, lambda_opt_index=lambda_opt_ind)
 
@@ -127,13 +128,17 @@ price <- train_data$PRICE
 plot_ts_and_correlogram(price)
 plot_ts_and_correlogram(price, differentiate = T)
 
-sarima21 <- sarima(price, 2,1,3, no.constant=T)
+sarima21 <- sarima(price, 2,1,0,  0,1,1,S=12, no.constant=T, max.lag=70)
 sarima21$ttable
 pred <- predict(sarima21$fit, n.ahead=n_test)
 
 eval_arima <- model_evaluation(sarima21, gasoline_month, test_data, ARIMA=T)
 
-
+plot(gasoline_month$PRICE~gasoline_month$date, type='l',
+     main="gasoline total-price over time", 
+     ylab='PRICE (euro * 1000)', xlab='date')
+points(eval_arima$test_predictions~gasoline_month$date[idx:n], type='l', col=2,
+       lwd=3)
 
 #*************************************** FINAL COMPARAISON *******************************************#
 eval_linear$rmse
@@ -147,25 +152,27 @@ eval_arima$rmse
 rmse <- c(eval_linear$rmse,
           eval_lasso$rmse,
           #eval_gam_loess$rmse,
-          eval_gam_normal$rmse,
+          #eval_gam_normal$rmse,
           eval_gam_s$rmse,
           eval_gbm$rmse,
           eval_arima$rmse)
 plot(rmse/1000, pch=15, col='#21A78E', cex=2,
-     ylab='RMSE (€)',ylim=c(0.05,0.19), xlim=c(0,7))
-text(1:length(rmse), rmse/1000, c('linear', 'lasso', 'linear gam', 'spline gam',
-                                 'gbm', 'arima'), pos=1, offset = 1)
+     ylab='RMSE (€)',ylim=c(0.05,0.19), xlim=c(0,6),
+     xaxt = "n",)
+text(1:length(rmse), rmse/1000, c('linear', 'lasso', 'spline gam',
+                                 'gbm', 'sarima'), pos=1, offset = 1)
 grid()
 
 #******************** BEST MODEL: ARIMA over LASSO ***************************#
 
 res_lasso<- eval_lasso$predictions[1:idx] - train_data$PRICE
 plot(res_lasso~train_data$date, type='l', 
-     main='Is there heteroschedastity?', xlab='date')
-acf(diff(res_lasso), lag.max = 80)
+     main='Lasso residuals distribution over time', xlab='date', 
+     ylab='lasso residuals')
+acf(diff(res_lasso), lag.max = 80, lwd=2)
 
 arima_on_lasso <- sarima(res_lasso, 0,1,3, 0,1,1,S=12, no.constant = T,
-                         max.lag=50)
+                         max.lag=80, lwd=2)
 
 arima_on_lasso$ttable
 arima_on_lasso_pred <- predict(arima_on_lasso$fit, n.ahead=n_test) 
@@ -173,9 +180,16 @@ arima_on_lasso_pred <- arima_on_lasso_pred$pred %>% as.vector
 
 final_forecasts <- eval_lasso$predictions[(idx):n] + arima_on_lasso_pred
 
-plot(test_data$PRICE, type='l')
-points(1:65,final_forecasts, col=2, type='l')
-points(1:65,eval_lasso$predictions[(idx):n], col=3, type='l')
+plot(gasoline_month$PRICE[200:n]~gasoline_month$date[200:n], type='l',
+     main="gasoline price over time", 
+     ylab='PRICE (euro * 1000)', xlab='date',
+     lty=2)
+points(final_forecasts~gasoline_month$date[idx:n], type='l', col=2,
+       lwd=2)
+points(eval_lasso$predictions[(idx):n]~gasoline_month$date[idx:n], col=3, type='l',
+       lwd=2)
+legend('topleft', legend=c('LASSO + SARIMA', 'LASSO'), col=c(2,3), lty=c(1,1),
+       lwd=c(2,2))
 
 rmse(test_data$PRICE,final_forecasts)
 rmse(test_data$PRICE, eval_lasso$test_predictions)
@@ -204,9 +218,11 @@ bm <- BM(gasoline_month$PRICE,display = T)
 summary(bm)
 GBMr1tw<- GBM(gasoline_month$PRICE,shock = "exp",nshock = 1,prelimestimates = c(8.503278e+05, 9.549630e-04, 5.497510e-03, 130, -0.1,-0.1))
 
-GBMr1tw<- GBM(gasoline_month$PRICE,shock = "rett",nshock = 1,prelimestimates = c(8.503278e+05, 9.549630e-04, 5.497510e-03, 160, 220,0.1))
+GBMr1tw<- GBM(gasoline_month$PRICE,shock = "rett",nshock = 1,
+              prelimestimates = c(8.503278e+05, 9.549630e-04, 5.497510e-03, 160, 220,0.1),
+              col='#21A78E')
 summary(GBMr1tw)
-
+gas
 
 #****************************** PLOT THE PREDICTION OF EVERY MODEL ***********************#
 vis_prediction(gasoline_month$PRICE, eval_linear$predictions)
